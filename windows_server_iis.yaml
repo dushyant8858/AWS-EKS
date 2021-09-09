@@ -1,28 +1,28 @@
 # eksctl utils install-vpc-controllers --cluster Linux-Windows-v1-21 --region us-east-2 --approve
 # kubectl apply -f windows_server_iis.yaml
-# kubectl -n windows get svc,deploy,pods
-# export WINDOWS_IIS_SVC=$(kubectl -n windows get svc -o jsonpath='{.items[].status.loadBalancer.ingress[].hostname}')
+# kubectl -n windowslinux get svc,deploy,pods
+# export WINDOWS_IIS_SVC=$(kubectl -n windowslinux get svc -o jsonpath='{.items[].status.loadBalancer.ingress[].hostname}')
 # echo http://${WINDOWS_IIS_SVC}
 # kubectl -n kube-system edit configmap coredns
         # log    # Enabling CoreDNS Logging
 
 
-# kubectl -n windows get pods -w 
-# kubectl -n windows get deploy -w
-# kubectl -n windows get svc -w 
+# kubectl -n windowslinux get pods -w 
+# kubectl -n windowslinux get deploy -w
+# kubectl -n windowslinux get svc -w 
 
 # kubectl scale deployment --replicas=1 -n kube-system coredns 
 
-# kubectl scale deployment --replicas=1 -n windows windows-server-iis
-# kubectl describe pods -n windows windows-server-iis-
+# kubectl scale deployment --replicas=1 -n windowslinux windows-server-iis
+# kubectl describe pods -n windowslinux windows-server-iis-
 
-# kubectl exec -n windows -it windows-server-iis-7cff879775-999l5 -- powershell
-# kubectl -n windows exec -it nginx-5cf8d4cb78-6wjb2 -- bash
+# kubectl exec -n windowslinux -it windows-server-iis-7cff879775-999l5 -- powershell
+# kubectl -n windowslinux exec -it nginx-5cf8d4cb78-6wjb2 -- bash
 
 
 #########
 # cat /etc/resolv.conf
-# curl.exe nginx:80
+# curl.exe nginx-service:80
 # # # Run: Kubect exec -it POD NAME – powershell
 # # 2# Run: nslookup Kubernetes.default (this will probably fail)
  
@@ -40,7 +40,7 @@
  
 # # 5# Try to resolve the name again and see if it solves the problem.
 
-## 6# nslookup nginx.windows.svc.cluster.local
+## 6# nslookup nginx-service.windowslinux.svc.cluster.local
 ## cat C:\ProgramData\Amazon\EKS\cni\config\vpc-shared-eni.conf
 
 
@@ -48,18 +48,18 @@
 # kubectl get service kube-dns -n kube-system
 # kubectl -n kube-system get endpoints kube-dns
 
-# nslookup nginx 192.168.106.18
-# nslookup nginx 10.100.0.10
+# nslookup nginx-service 192.168.106.18:53
+# nslookup nginx-service 10.100.0.10:53
 
-# Resolve-DNSName nginx -Server 192.168.106.18
-# Resolve-DNSName nginx -Server 10.100.0.10
+# Resolve-DNSName nginx-service -Server 192.168.106.18
+# Resolve-DNSName nginx-service -Server 10.100.0.10
 
 # Resolve-DNSName www.google.com -Server 192.168.106.18
 # Resolve-DNSName www.google.com -Server 10.100.0.10
 
-# Resolve-DNSName nginx
-# Resolve-DNSName nginx.windows.svc.cluster.local -Server 192.168.106.18
-# Resolve-DNSName nginx.windows.svc.cluster.local -Server 10.100.0.10
+# Resolve-DNSName nginx-service
+# Resolve-DNSName nginx-service.windowslinux.svc.cluster.local -Server 192.168.106.18
+# Resolve-DNSName nginx-service.windowslinux.svc.cluster.local -Server 10.100.0.10
 
 
 # Resolve-DNSName kubernetes.default.svc.cluster.local
@@ -67,7 +67,7 @@
 # Resolve-DNSName kubernetes.default.svc.cluster.local -Server 10.100.0.10
 
 
-# curl.exe -Iv nginx 
+# curl.exe -Iv nginx-service 
 
 
 ### WINDOWS ###
@@ -84,6 +84,10 @@ kind: Deployment
 metadata:
   name: windows-server-iis-deployment
   namespace: windowslinux
+  labels:
+    app: nginx
+    tier: windows
+
 spec:
   selector:
     matchLabels:
@@ -159,6 +163,7 @@ spec:
   selector:
     matchLabels:
       app: nginx
+      tier: linux
   template:
     metadata:
       labels:
