@@ -1,0 +1,56 @@
+# # eksctl create cluster -f /Users/dubaria/Desktop/Excercises/EKS/ekctl/Linux_Windows/v1-21/Linux_Windows_Cluster_v1-21.yaml
+# # eksctl update cluster -f Linux_Windows_Cluster_1-21.yaml
+# # eksctl create nodegroup -f Linux_Windows_Cluster_1-21.yaml
+# # eksctl create nodegroup --config-file=Linux_Windows_Cluster_1-21.yaml --include=windows-ng
+# # eksctl delete nodegroup windows-ng
+# # eksctl utils install-vpc-controllers --cluster Linux-Windows-v1-21 --approve --region us-east-2
+# # kubectl get nodes -l kubernetes.io/os=windows -L kubernetes.io/os
+
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: Linux-Windows-v1-21
+  region: us-east-2
+  version: "1.21"
+  tags: 
+    'EKS-Cluster-Name': 'Linux-Windows-v1-21'
+    'auto-delete': 'no'
+
+nodeGroups:
+  ### LINUX ###
+  - name: Linux-NG-Linux-Windows-v1-21
+    instanceType: t3.medium
+    minSize: 1
+    desiredCapacity: 1
+    maxSize: 3
+    ssh:
+      publicKeyName: 'us-east-2'
+      allow: true
+      # sourceSecurityGroupIds: ["sg-0306ed799d10285e2"]
+      enableSsm: true
+    privateNetworking: true
+    tags: 
+      'NodeGroup Name': 'Linux-NG-Linux-Windows-v1-21'
+      'auto-delete': 'no'
+
+  ### WINDOWS ###
+  - name: Windows-NG-Linux-Windows-v1-21
+    instanceType: t3.large
+    amiFamily: WindowsServer2019CoreContainer
+    minSize: 1
+    desiredCapacity: 1
+    maxSize: 3
+    ssh:
+      publicKeyName: 'us-east-2'
+      allow: true
+      # sourceSecurityGroupIds: ["sg-0306ed799d10285e2"]
+      enableSsm: true
+    privateNetworking: true
+    tags: 
+      'NodeGroup Name': 'Windows-NG-Linux-Windows-v1.21'
+      'auto-delete': 'no'
+
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["api", "audit", "authenticator", "controllerManager", "scheduler"]

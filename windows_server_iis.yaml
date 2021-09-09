@@ -1,0 +1,184 @@
+# eksctl utils install-vpc-controllers --cluster Linux-Windows-v1-21 --region us-east-2 --approve
+# kubectl apply -f windows_server_iis.yaml
+# kubectl -n windows get svc,deploy,pods
+# export WINDOWS_IIS_SVC=$(kubectl -n windows get svc -o jsonpath='{.items[].status.loadBalancer.ingress[].hostname}')
+# echo http://${WINDOWS_IIS_SVC}
+# kubectl -n kube-system edit configmap coredns
+        # log    # Enabling CoreDNS Logging
+
+
+# kubectl -n windows get pods -w 
+# kubectl -n windows get deploy -w
+# kubectl -n windows get svc -w 
+
+# kubectl scale deployment --replicas=1 -n kube-system coredns 
+
+# kubectl scale deployment --replicas=1 -n windows windows-server-iis
+# kubectl describe pods -n windows windows-server-iis-
+
+# kubectl exec -n windows -it windows-server-iis-7cff879775-999l5 -- powershell
+# kubectl -n windows exec -it nginx-5cf8d4cb78-6wjb2 -- bash
+
+
+#########
+# cat /etc/resolv.conf
+# curl.exe nginx:80
+# # # Run: Kubect exec -it POD NAME – powershell
+# # 2# Run: nslookup Kubernetes.default (this will probably fail)
+ 
+# # Server:  kube-dns.kube-system.svc.cluster.local
+# # Address:  10.100.0.10
+ 
+# # *** kube-dns.kube-system.svc.cluster.local can't find kubernetes.default: Non-existent domain
+ 
+ 
+# # Then, 
+ 
+# # 3# Run: Get-DNSClientGlobalSetting (probably an empty SuffixSearchList)
+ 
+# # 4# Run Set-DnsClientGlobalSetting -SuffixSearchList @("default.svc.cluster.local", "svc.cluster.local", "cluster.local")
+ 
+# # 5# Try to resolve the name again and see if it solves the problem.
+
+## 6# nslookup nginx.windows.svc.cluster.local
+## cat C:\ProgramData\Amazon\EKS\cni\config\vpc-shared-eni.conf
+
+
+
+# kubectl get service kube-dns -n kube-system
+# kubectl -n kube-system get endpoints kube-dns
+
+# nslookup nginx 192.168.106.18
+# nslookup nginx 10.100.0.10
+
+# Resolve-DNSName nginx -Server 192.168.106.18
+# Resolve-DNSName nginx -Server 10.100.0.10
+
+# Resolve-DNSName www.google.com -Server 192.168.106.18
+# Resolve-DNSName www.google.com -Server 10.100.0.10
+
+# Resolve-DNSName nginx
+# Resolve-DNSName nginx.windows.svc.cluster.local -Server 192.168.106.18
+# Resolve-DNSName nginx.windows.svc.cluster.local -Server 10.100.0.10
+
+
+# Resolve-DNSName kubernetes.default.svc.cluster.local
+# Resolve-DNSName kubernetes.default.svc.cluster.local -Server 192.168.106.18
+# Resolve-DNSName kubernetes.default.svc.cluster.local -Server 10.100.0.10
+
+
+# curl.exe -Iv nginx 
+
+
+### WINDOWS ###
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: windowslinux
+  labels:
+    name: windowslinux
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windows-server-iis-deployment
+  namespace: windowslinux
+spec:
+  selector:
+    matchLabels:
+      app: windows-server-iis
+      tier: windows
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: windows-server-iis
+        tier: windows
+    spec:
+      containers:
+      - name: windows-server-iis
+        image: mcr.microsoft.com/windows/servercore:1809
+        ports:
+        - name: http
+          containerPort: 80
+        imagePullPolicy: IfNotPresent
+        command:
+        - powershell.exe
+        - -command
+        - "Add-WindowsFeature Web-Server; Invoke-WebRequest -UseBasicParsing -Uri 'https://dotnetbinaries.blob.core.windows.net/servicemonitor/2.0.1.6/ServiceMonitor.exe' -OutFile 'C:\\ServiceMonitor.exe'; echo '<html><body><br/><br/><marquee><H1>Hello EKS!!!<H1><marquee></body><html>' > C:\\inetpub\\wwwroot\\default.html; C:\\ServiceMonitor.exe 'w3svc'; "
+      nodeSelector:
+        kubernetes.io/os: windows
+        # kubernetes.io/arch: amd64
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: windows-server-iis-service
+  namespace: windowslinux
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: windows-server-iis
+    tier: windows
+  sessionAffinity: None
+  # type: LoadBalancer
+---
+
+### LINUX ###
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: windowslinux
+  labels:
+    app: nginx
+    tier: linux
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: windowslinux
+  labels:
+    app: nginx
+    tier: linux
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+        tier: linux
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: beta.kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+      containers:
+      - name: nginx
+        image: public.ecr.aws/z9d2n7e1/nginx:1.19.5
+        ports:
+        - containerPort: 8080
+      nodeSelector:
+        kubernetes.io/os: linux
